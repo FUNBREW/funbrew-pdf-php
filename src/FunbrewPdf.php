@@ -70,6 +70,20 @@ class FunbrewPdf
     }
 
     /**
+     * Preview Markdown as HTML
+     *
+     * @param string $markdown Markdown content
+     * @param string $theme Theme name (default: business)
+     */
+    public function markdownPreview(string $markdown, string $theme = 'business'): array
+    {
+        return $this->post('/api/markdown/preview', [
+            'markdown' => $markdown,
+            'theme' => $theme,
+        ]);
+    }
+
+    /**
      * Generate PDF from template
      */
     public function fromTemplate(string $slug, array $variables = [], array $options = []): array
@@ -146,6 +160,126 @@ class FunbrewPdf
     }
 
     /**
+     * Split a PDF by extracting specific pages
+     *
+     * @param string $filename Source PDF filename
+     * @param string $pages Page specification (e.g. "1-3", "1,3,5", "1,3-5")
+     * @param array $options Additional options (expiration_hours, max_downloads)
+     */
+    public function split(string $filename, string $pages, array $options = []): array
+    {
+        return $this->post('/api/pdf/split', array_merge(
+            ['filename' => $filename, 'pages' => $pages],
+            $options,
+        ));
+    }
+
+    /**
+     * Rotate PDF pages
+     *
+     * @param string $filename Source PDF filename
+     * @param int $angle Rotation angle (90, 180, or 270)
+     * @param string|null $pages Optional page specification (e.g. "1,3"). Rotates all if null.
+     * @param array $options Additional options (expiration_hours, max_downloads)
+     */
+    public function rotate(string $filename, int $angle, ?string $pages = null, array $options = []): array
+    {
+        $data = array_merge(['filename' => $filename, 'angle' => $angle], $options);
+        if ($pages !== null) {
+            $data['pages'] = $pages;
+        }
+
+        return $this->post('/api/pdf/rotate', $data);
+    }
+
+    /**
+     * Compress a PDF to reduce file size
+     *
+     * @param string $filename Source PDF filename
+     * @param string $quality Compression quality (low, medium, high)
+     * @param array $options Additional options (expiration_hours, max_downloads)
+     */
+    public function compress(string $filename, string $quality = 'medium', array $options = []): array
+    {
+        return $this->post('/api/pdf/compress', array_merge(
+            ['filename' => $filename, 'quality' => $quality],
+            $options,
+        ));
+    }
+
+    /**
+     * Extract text from a PDF
+     *
+     * @param string $filename Source PDF filename
+     * @param array $options Additional options (pages, per_page)
+     */
+    public function extractText(string $filename, array $options = []): array
+    {
+        return $this->post('/api/pdf/extract-text', array_merge(
+            ['filename' => $filename],
+            $options,
+        ));
+    }
+
+    /**
+     * Read or set PDF metadata
+     *
+     * @param string $filename Source PDF filename
+     * @param array $fields Metadata fields (title, author, subject, keywords, creator, producer)
+     */
+    public function metadata(string $filename, array $fields = []): array
+    {
+        return $this->post('/api/pdf/metadata', array_merge(
+            ['filename' => $filename],
+            $fields,
+        ));
+    }
+
+    /**
+     * Add page numbers to a PDF
+     *
+     * @param string $filename Source PDF filename
+     * @param array $options Options (position, format, start_number, font_size)
+     */
+    public function pageNumbers(string $filename, array $options = []): array
+    {
+        return $this->post('/api/pdf/page-numbers', array_merge(
+            ['filename' => $filename],
+            $options,
+        ));
+    }
+
+    /**
+     * Convert PDF to PDF/A archival format
+     *
+     * @param string $filename Source PDF filename
+     * @param string $conformance PDF/A conformance level (1b, 2b, 3b)
+     * @param array $options Additional options
+     */
+    public function toPdfA(string $filename, string $conformance = '2b', array $options = []): array
+    {
+        return $this->post('/api/pdf/to-pdfa', array_merge(
+            ['filename' => $filename, 'conformance' => $conformance],
+            $options,
+        ));
+    }
+
+    /**
+     * Convert PDF pages to images
+     *
+     * @param string $filename Source PDF filename
+     * @param string $format Output format (png or jpg)
+     * @param array $options Additional options (pages, dpi)
+     */
+    public function toImage(string $filename, string $format = 'png', array $options = []): array
+    {
+        return $this->post('/api/pdf/to-image', array_merge(
+            ['filename' => $filename, 'format' => $format],
+            $options,
+        ));
+    }
+
+    /**
      * Merge uploaded PDF files (and optionally server files) into one
      *
      * @param array<string|\SplFileInfo> $files File paths or SplFileInfo objects
@@ -202,6 +336,142 @@ class FunbrewPdf
 
             throw new FunbrewException('Network error: '.$e->getMessage(), 0, $e);
         }
+    }
+
+    // --- Templates (SaaS) ---
+
+    /**
+     * List all templates
+     */
+    public function templates(): array
+    {
+        return $this->get('/api/templates');
+    }
+
+    /**
+     * Create a template
+     *
+     * @param string $name Template name
+     * @param string $slug URL-safe slug (lowercase alphanumeric and hyphens)
+     * @param string $htmlContent HTML content with {{ variable }} placeholders
+     * @param array<int,array<string,mixed>>|null $variables Variable definitions ([{ "name": "...", "required": true }])
+     */
+    public function createTemplate(string $name, string $slug, string $htmlContent, ?array $variables = null): array
+    {
+        $payload = [
+            'name' => $name,
+            'slug' => $slug,
+            'html_content' => $htmlContent,
+        ];
+        if ($variables !== null) {
+            $payload['variables'] = $variables;
+        }
+
+        return $this->post('/api/templates', $payload);
+    }
+
+    /**
+     * Update a template
+     *
+     * @param int $templateId Template ID
+     * @param array $data Fields to update (name, html_content, variables, is_active)
+     */
+    public function updateTemplate(int $templateId, array $data): array
+    {
+        return $this->request('PUT', "/api/templates/{$templateId}", $data);
+    }
+
+    /**
+     * Delete a template
+     */
+    public function deleteTemplate(int $templateId): array
+    {
+        return $this->request('DELETE', "/api/templates/{$templateId}");
+    }
+
+    // --- Webhooks (SaaS) ---
+
+    /**
+     * List all webhooks
+     */
+    public function webhooks(): array
+    {
+        return $this->get('/api/webhooks');
+    }
+
+    /**
+     * Create a webhook
+     *
+     * @param string $url Webhook URL
+     * @param array<int,string> $events Event names to subscribe to
+     */
+    public function createWebhook(string $url, array $events): array
+    {
+        return $this->post('/api/webhooks', [
+            'url' => $url,
+            'events' => $events,
+        ]);
+    }
+
+    /**
+     * Update a webhook
+     *
+     * @param int $webhookId Webhook ID
+     * @param array $data Fields to update (url, events, is_active)
+     */
+    public function updateWebhook(int $webhookId, array $data): array
+    {
+        return $this->request('PUT', "/api/webhooks/{$webhookId}", $data);
+    }
+
+    /**
+     * Delete a webhook
+     */
+    public function deleteWebhook(int $webhookId): array
+    {
+        return $this->request('DELETE', "/api/webhooks/{$webhookId}");
+    }
+
+    // --- Storage Config (SaaS) ---
+
+    /**
+     * Get current storage configuration
+     */
+    public function storageConfig(): array
+    {
+        return $this->get('/api/storage-config');
+    }
+
+    /**
+     * Create storage configuration
+     *
+     * @param string $driver Storage driver ("s3" or "gcs")
+     * @param array $config Driver config (must include "bucket")
+     */
+    public function createStorageConfig(string $driver, array $config): array
+    {
+        return $this->post('/api/storage-config', [
+            'driver' => $driver,
+            'config' => $config,
+        ]);
+    }
+
+    /**
+     * Update storage configuration
+     *
+     * @param array $data Fields to update (driver, config, is_active)
+     */
+    public function updateStorageConfig(array $data): array
+    {
+        return $this->request('PUT', '/api/storage-config', $data);
+    }
+
+    /**
+     * Delete storage configuration
+     */
+    public function deleteStorageConfig(): array
+    {
+        return $this->request('DELETE', '/api/storage-config');
     }
 
     /**
