@@ -3,6 +3,13 @@
     "description": "FUNBREW PDF API client for PHP",
     "type": "library",
     "license": "MIT",
+    "homepage": "https://pdf.funbrew.cloud",
+    "keywords": ["pdf", "api", "html-to-pdf", "funbrew"],
+    "support": {
+        "source": "https://github.com/FUNBREW/funbrew-pdf-php",
+        "issues": "https://github.com/FUNBREW/funbrew-pdf-php/issues",
+        "docs": "https://pdf.funbrew.cloud/docs"
+    },
     "require": {
         "php": "^8.1",
         "guzzlehttp/guzzle": "^7.0"
